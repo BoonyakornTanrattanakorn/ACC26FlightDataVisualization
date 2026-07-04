@@ -1,13 +1,23 @@
 # ACC 2026 Flight Telemetry Dashboard
 
 A static, dependency-free dashboard for visualizing the Air Cargo Challenge 2026
-data in [`official_data/`](../official_data). Runs entirely in the browser and is
-served from GitHub Pages.
+data in [`data/`](data). Runs entirely in the browser and is served from GitHub Pages.
+
+## Pages
+
+The dashboard is split into three pages that share one stylesheet and a common
+JS module under [`docs/assets/`](docs/assets):
+
+- **Home** ([`index.html`](docs/index.html)) — overview, summary stats, and links
+  to the other two pages.
+- **Leaderboard** ([`leaderboard.html`](docs/leaderboard.html)) — all teams joined
+  with their scores (sortable). Clicking a team that has flight data opens it in
+  the explorer, deep-linked as `explorer.html?team=<id>&round=<n>`.
+- **Flight explorer** ([`explorer.html`](docs/explorer.html)) — pick a team + round
+  (or arrive via a deep link); the map and charts update and the URL stays in sync.
 
 ## What it shows
 
-- **Leaderboard** — all teams joined with their scores (sortable, click a row to load a flight).
-- **Flight explorer** — pick a team + round; the map and charts update.
 - **Ground track** — GPS path over the flying field, colored by altitude (Leaflet + OpenStreetMap).
 - **Altitude / Voltage / Current vs time** — per-flight telemetry (Chart.js).
 

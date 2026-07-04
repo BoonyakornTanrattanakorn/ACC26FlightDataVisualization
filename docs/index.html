@@ -4,508 +4,49 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ACC 2026 — Flight Telemetry Dashboard</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<style>
-:root {
-  --page:        #f9f9f7;
-  --surface:     #fcfcfb;
-  --text:        #0b0b0b;
-  --text-2:      #52514e;
-  --muted:       #898781;
-  --grid:        #e1e0d9;
-  --axis:        #c3c2b7;
-  --border:      rgba(11,11,11,0.10);
-  /* categorical series */
-  --alt:     #2a78d6;  /* blue   - altitude */
-  --volt:    #1baf7a;  /* aqua   - voltage  */
-  --curr:    #eda100;  /* yellow - current  */
-  --accent:  #e34948;  /* red    - markers  */
-  --good:    #006300;
-}
-:root[data-theme="dark"], html.dark:root {
-  color-scheme: dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page:    #0d0d0d;
-    --surface: #1a1a19;
-    --text:    #ffffff;
-    --text-2:  #c3c2b7;
-    --muted:   #898781;
-    --grid:    #2c2c2a;
-    --axis:    #383835;
-    --border:  rgba(255,255,255,0.10);
-    --alt:  #3987e5;
-    --volt: #199e70;
-    --curr: #c98500;
-    --accent:#e66767;
-    --good: #0ca30c;
-  }
-}
-:root[data-theme="dark"] {
-  --page:#0d0d0d; --surface:#1a1a19; --text:#fff; --text-2:#c3c2b7; --muted:#898781;
-  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
-  --alt:#3987e5; --volt:#199e70; --curr:#c98500; --accent:#e66767; --good:#0ca30c;
-}
-:root[data-theme="light"] {
-  --page:#f9f9f7; --surface:#fcfcfb; --text:#0b0b0b; --text-2:#52514e; --muted:#898781;
-  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
-  --alt:#2a78d6; --volt:#1baf7a; --curr:#eda100; --accent:#e34948; --good:#006300;
-}
-
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--page);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
-}
-a { color: var(--alt); }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 64px; }
-
-header.top {
-  display: flex; align-items: baseline; justify-content: space-between;
-  flex-wrap: wrap; gap: 8px; margin-bottom: 4px;
-}
-h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-.sub { color: var(--text-2); margin: 2px 0 20px; font-size: 13px; }
-.theme-btn {
-  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
-  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.card h2 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
-.card h2 .hint { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 6px; }
-
-/* controls */
-.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
-.field { display: flex; flex-direction: column; gap: 4px; }
-.field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-select {
-  background: var(--page); color: var(--text); border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 9px; font-size: 13px; min-width: 240px;
-  font-family: inherit;
-}
-.round-pills { display: flex; gap: 6px; }
-.round-pills button {
-  border: 1px solid var(--border); background: var(--page); color: var(--text-2);
-  border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
-  font-variant-numeric: tabular-nums;
-}
-.round-pills button[aria-pressed="true"] { background: var(--alt); color: #fff; border-color: var(--alt); }
-.round-pills button:disabled { opacity: .32; cursor: not-allowed; }
-
-/* stat tiles */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin-top: 14px; }
-.stat { background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-.stat .v { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-.stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.stat .u { font-size: 12px; color: var(--text-2); font-weight: 400; }
-
-/* layout */
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
-#map { height: 380px; border-radius: 10px; overflow: hidden; }
-.chart-box { position: relative; height: 240px; }
-.chart-box.tall { height: 300px; }
-
-/* leaderboard */
-.lb-scroll { overflow-x: auto; }
-table.lb { border-collapse: collapse; width: 100%; font-size: 13px; }
-table.lb th, table.lb td { padding: 7px 10px; text-align: right; white-space: nowrap; }
-table.lb th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase;
-  letter-spacing: .04em; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
-table.lb th.l, table.lb td.l { text-align: left; }
-table.lb td { border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
-table.lb tbody tr:hover { background: var(--page); }
-table.lb tr.active td { background: color-mix(in srgb, var(--alt) 12%, var(--surface)); }
-table.lb tr.dsq td { opacity: .5; }
-.rank { color: var(--muted); font-variant-numeric: tabular-nums; }
-.team-name { font-weight: 600; }
-.team-uni { color: var(--muted); font-size: 11px; }
-th.sorted::after { content: " ▾"; color: var(--alt); }
-th.sorted.asc::after { content: " ▴"; }
-
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
-.legend .k { display: inline-flex; align-items: center; gap: 6px; }
-.legend .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
-.mapnote { font-size: 12px; color: var(--muted); margin-top: 8px; }
-.foot { color: var(--muted); font-size: 12px; margin-top: 24px; text-align: center; }
-.err { color: var(--accent); font-size: 13px; }
-</style>
+<link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div>
-      <h1>Air Cargo Challenge 2026 — Flight Telemetry</h1>
-    </div>
-    <button class="theme-btn" id="themeBtn" type="button">Toggle theme</button>
-  </header>
-  <p class="sub">33 teams · 4 competition rounds · GPS track, altitude, voltage &amp; current per flight. Field at 48.639° N, 8.942° E.</p>
+  <div id="siteHeader"></div>
 
-  <!-- Leaderboard -->
-  <section class="card">
-    <h2>Leaderboard <span class="hint">click a row to load that team’s flight · click a header to sort</span></h2>
-    <div class="lb-scroll">
-      <table class="lb" id="lbTable">
-        <thead><tr>
-          <th class="l" data-k="rank">#</th>
-          <th class="l" data-k="name">Team</th>
-          <th data-k="roundTotal">Flight</th>
-          <th data-k="presentation">Pres.</th>
-          <th data-k="drawings">Draw.</th>
-          <th data-k="report">Report</th>
-          <th data-k="penalties">Pen.</th>
-          <th data-k="total" class="sorted">Total</th>
-        </tr></thead>
-        <tbody id="lbBody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Flight selector + stats -->
-  <section class="card">
-    <h2>Flight explorer</h2>
-    <div class="controls">
-      <div class="field">
-        <label for="teamSel">Team</label>
-        <select id="teamSel"></select>
-      </div>
-      <div class="field">
-        <label>Round</label>
-        <div class="round-pills" id="roundPills"></div>
-      </div>
-    </div>
-    <div class="stats" id="stats"></div>
+  <section class="card hero">
+    <h2>About this dashboard</h2>
+    <p style="margin:0;color:var(--text-2)">
+      A static, dependency-free dashboard for the Air Cargo Challenge 2026 flight
+      telemetry. Browse the full competition standings, then dive into any team's
+      flight to see its GPS ground track, altitude, battery voltage and current
+      draw over time. Data is served straight from the recorded flights — every
+      raw sample is kept (lossless).
+    </p>
+    <div class="stats" id="summary"></div>
     <div id="loadErr" class="err" style="margin-top:10px;"></div>
   </section>
 
-  <div class="grid2">
-    <!-- Map -->
-    <section class="card">
-      <h2>Ground track <span class="hint">colour = altitude</span></h2>
-      <div id="map"></div>
-      <div class="mapnote" id="mapnote"></div>
-    </section>
-
-    <!-- Altitude -->
-    <section class="card">
-      <h2>Altitude vs time</h2>
-      <div class="legend">
-        <span class="k"><span class="sw" style="background:var(--alt)"></span>Barometric (rel. ground)</span>
-        <span class="k"><span class="sw" style="background:var(--muted)"></span>GPS (MSL)</span>
-      </div>
-      <div class="chart-box"><canvas id="altChart"></canvas></div>
-    </section>
+  <div class="nav-cards">
+    <a class="nav-card" href="leaderboard.html">
+      <h3>🏆 Leaderboard</h3>
+      <p>Full competition standings — flight, presentation, drawings, report and
+         penalties. Sort by any column and jump straight to a team's flight.</p>
+      <span class="go">View standings →</span>
+    </a>
+    <a class="nav-card" href="explorer.html">
+      <h3>🛩️ Flight Explorer</h3>
+      <p>Pick a team and round to load its ground track on the map plus altitude,
+         voltage and current charts, with per-flight summary stats.</p>
+      <span class="go">Explore flights →</span>
+    </a>
   </div>
 
-  <div class="grid2">
-    <section class="card">
-      <h2>Battery voltage vs time</h2>
-      <div class="chart-box"><canvas id="voltChart"></canvas></div>
-    </section>
-    <section class="card">
-      <h2>Current draw vs time</h2>
-      <div class="chart-box"><canvas id="currChart"></canvas></div>
-    </section>
-  </div>
-
-  <p class="foot">Static dashboard · data from <code>official_data/</code> · built for GitHub Pages.</p>
+  <p class="foot">Static dashboard · data from <code>data/</code> · built for GitHub Pages.</p>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/common.js"></script>
 <script>
 "use strict";
-
-// ---------- palette helpers (read live CSS vars so theme swaps apply) ----------
-const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const COL = () => ({
-  alt: css("--alt"), volt: css("--volt"), curr: css("--curr"),
-  accent: css("--accent"), grid: css("--grid"), axis: css("--axis"),
-  text2: css("--text-2"), muted: css("--muted"), surface: css("--surface"),
-});
-
-// ---------- state ----------
-let SCORES = [];
-let INDEX = [];            // flights_index
-let TEAMS = {};            // id -> team record
-let curTeam = null, curRound = null;
-let map, trackLayer, startMarker, endMarker;
-const charts = {};
-let lbSort = { k: "total", asc: false };
-
-// ---------- data loading ----------
-async function loadBase() {
-  const [scores, index] = await Promise.all([
-    fetch("data/scores.json").then(r => r.json()),
-    fetch("data/flights_index.json").then(r => r.json()),
-  ]);
-  SCORES = scores;
-  INDEX = index;
-  SCORES.forEach(t => { TEAMS[t.id] = t; });
-}
-
-function roundsForTeam(teamId) {
-  return INDEX.filter(f => f.teamId === teamId).map(f => f.round).sort((a,b)=>a-b);
-}
-function flightMeta(teamId, round) {
-  return INDEX.find(f => f.teamId === teamId && f.round === round);
-}
-
-async function loadFlight(teamId, round) {
-  const meta = flightMeta(teamId, round);
-  if (!meta) return null;
-  const text = await fetch(meta.file).then(r => r.text());
-  const lines = text.trim().split(/\r?\n/);
-  const head = lines[0].split(",");
-  const idx = Object.fromEntries(head.map((h,i)=>[h,i]));
-  const rows = lines.slice(1).map(line => {
-    const c = line.split(",");
-    return {
-      t: +c[idx.t], x: +c[idx.x], y: +c[idx.y],
-      altGps: +c[idx.altGps], altBaro: +c[idx.altBaro],
-      voltage: +c[idx.voltage], current: +c[idx.current],
-      lat: +c[idx.lat], lon: +c[idx.lon],
-    };
-  });
-  return { meta, rows };
-}
-
-// ---------- leaderboard ----------
-function renderLeaderboard() {
-  const body = document.getElementById("lbBody");
-  const { k, asc } = lbSort;
-  const rows = [...SCORES].sort((a,b) => {
-    let av = a[k], bv = b[k];
-    if (typeof av === "string") return asc ? av.localeCompare(bv) : bv.localeCompare(av);
-    return asc ? av - bv : bv - av;
-  });
-  body.innerHTML = rows.map(t => {
-    const active = t.id === curTeam ? " active" : "";
-    const dsq = t.dsq ? " dsq" : "";
-    return `<tr class="lbrow${active}${dsq}" data-id="${t.id}">
-      <td class="l rank">${t.rank}</td>
-      <td class="l"><span class="team-name">${t.flag} ${esc(t.name)}</span><br>
-          <span class="team-uni">${esc(t.university)}</span></td>
-      <td>${t.roundTotal}</td>
-      <td>${t.presentation}</td>
-      <td>${t.drawings}</td>
-      <td>${t.report}</td>
-      <td>${t.penalties ? "−"+t.penalties : "0"}</td>
-      <td><strong>${t.total}</strong></td>
-    </tr>`;
-  }).join("");
-  body.querySelectorAll("tr.lbrow").forEach(tr => {
-    tr.addEventListener("click", () => selectTeam(+tr.dataset.id));
-  });
-  document.querySelectorAll("#lbTable th").forEach(th => {
-    th.classList.toggle("sorted", th.dataset.k === k);
-    th.classList.toggle("asc", th.dataset.k === k && asc);
-  });
-}
-function esc(s){ return String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-
-// ---------- selectors ----------
-function buildTeamSelect() {
-  const sel = document.getElementById("teamSel");
-  const withFlights = SCORES.filter(t => roundsForTeam(t.id).length);
-  sel.innerHTML = withFlights.map(t =>
-    `<option value="${t.id}">${t.flag} ${esc(t.name)} — ${esc(t.university)}</option>`
-  ).join("");
-  sel.addEventListener("change", () => selectTeam(+sel.value));
-}
-
-function buildRoundPills() {
-  const wrap = document.getElementById("roundPills");
-  const avail = new Set(roundsForTeam(curTeam));
-  wrap.innerHTML = [1,2,3,4].map(r =>
-    `<button data-r="${r}" ${avail.has(r)?"":"disabled"}
-       aria-pressed="${r===curRound}">R${r}</button>`
-  ).join("");
-  wrap.querySelectorAll("button").forEach(b => {
-    b.addEventListener("click", () => { if (!b.disabled) selectRound(+b.dataset.r); });
-  });
-}
-
-async function selectTeam(teamId) {
-  curTeam = teamId;
-  const rounds = roundsForTeam(teamId);
-  if (!rounds.length) return;
-  if (!rounds.includes(curRound)) curRound = rounds[0];
-  document.getElementById("teamSel").value = String(teamId);
-  buildRoundPills();
-  renderLeaderboard();
-  await refreshFlight();
-}
-async function selectRound(round) {
-  curRound = round;
-  buildRoundPills();
-  await refreshFlight();
-}
-
-// ---------- stats ----------
-function renderStats(flight) {
-  const { rows, meta } = flight;
-  const t = TEAMS[curTeam];
-  const maxAlt = Math.max(...rows.map(r => r.altBaro));
-  const vEnd = rows[rows.length-1].voltage;
-  const vMax = Math.max(...rows.map(r => r.voltage));
-  const iMax = Math.max(...rows.map(r => r.current));
-  // rough distance along track
-  let dist = 0;
-  for (let i=1;i<rows.length;i++){ dist += Math.hypot(rows[i].x-rows[i-1].x, rows[i].y-rows[i-1].y); }
-  const tile = (v,u,l) => `<div class="stat"><div class="v">${v}<span class="u"> ${u}</span></div><div class="l">${l}</div></div>`;
-  document.getElementById("stats").innerHTML =
-    tile(meta.durationS.toFixed(0), "s", "Duration") +
-    tile(maxAlt.toFixed(1), "m", "Max altitude") +
-    tile((dist/1000).toFixed(2), "km", "Track length") +
-    tile(vMax.toFixed(2), "V", "Peak voltage") +
-    tile(iMax.toFixed(1), "A", "Peak current") +
-    tile((t.predictedPayload ?? "—"), "", "Pred. payload");
-}
-
-// ---------- map ----------
-function initMap() {
-  map = L.map("map", { zoomControl: true, attributionControl: true });
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19, attribution: "© OpenStreetMap"
-  }).addTo(map);
-  map.setView([48.639, 8.942], 16);
-}
-function renderMap(flight) {
-  if (trackLayer) trackLayer.remove();
-  if (startMarker) startMarker.remove();
-  if (endMarker) endMarker.remove();
-  const { rows } = flight;
-  const alts = rows.map(r => r.altBaro);
-  const lo = Math.min(...alts), hi = Math.max(...alts) || 1;
-  const c = COL();
-  // altitude-coloured polyline (sequential blue): draw as coloured segments
-  const segs = [];
-  for (let i=1;i<rows.length;i++){
-    const frac = (rows[i].altBaro - lo) / (hi - lo || 1);
-    segs.push(L.polyline(
-      [[rows[i-1].lat,rows[i-1].lon],[rows[i].lat,rows[i].lon]],
-      { color: seqBlue(frac), weight: 3, opacity: 0.95 }
-    ));
-  }
-  trackLayer = L.layerGroup(segs).addTo(map);
-  const a = rows[0], z = rows[rows.length-1];
-  startMarker = L.circleMarker([a.lat,a.lon], {radius:6,color:"#fff",weight:2,fillColor:c.volt,fillOpacity:1}).bindTooltip("Start").addTo(map);
-  endMarker = L.circleMarker([z.lat,z.lon], {radius:6,color:"#fff",weight:2,fillColor:c.accent,fillOpacity:1}).bindTooltip("End").addTo(map);
-  const bounds = L.latLngBounds(rows.map(r=>[r.lat,r.lon]));
-  map.fitBounds(bounds.pad(0.15));
-  document.getElementById("mapnote").textContent =
-    `Altitude range ${lo.toFixed(1)}–${hi.toFixed(1)} m · lighter → higher.`;
-}
-// sequential blue ramp 250→650
-function seqBlue(f){
-  const stops = ["#86b6ef","#5598e7","#3987e5","#256abf","#184f95","#104281"];
-  const i = Math.min(stops.length-1, Math.max(0, Math.floor(f*(stops.length-1))));
-  return stops[i];
-}
-
-// ---------- line charts ----------
-function baseOpts(yLabel) {
-  const c = COL();
-  return {
-    responsive: true, maintainAspectRatio: false,
-    interaction: { mode: "index", intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: c.surface, titleColor: c.text2, bodyColor: c.text2,
-        borderColor: c.grid, borderWidth: 1,
-        callbacks: { title: (it)=> `t = ${it[0].parsed.x.toFixed(1)} s` },
-      },
-    },
-    scales: {
-      x: { type:"linear", title:{display:true,text:"time (s)",color:c.muted},
-           grid:{color:c.grid}, ticks:{color:c.muted}, border:{color:c.axis} },
-      y: { title:{display:true,text:yLabel,color:c.muted},
-           grid:{color:c.grid}, ticks:{color:c.muted}, border:{color:c.axis} },
-    },
-    elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2 } },
-  };
-}
-function mkLine(id, datasets, yLabel) {
-  const ctx = document.getElementById(id);
-  if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart(ctx, { type:"line", data:{datasets}, options: baseOpts(yLabel) });
-}
-function renderCharts(flight) {
-  const { rows } = flight;
-  const c = COL();
-  const xy = (key) => rows.map(r => ({ x: r.t, y: r[key] }));
-  mkLine("altChart", [
-    { label:"Baro", data: xy("altBaro"), borderColor:c.alt, tension:.15 },
-    { label:"GPS",  data: xy("altGps").map(p=>({x:p.x,y:p.y})), borderColor:c.muted, borderDash:[4,4], tension:.15, hidden:false },
-  ], "altitude (m)");
-  mkLine("voltChart", [
-    { label:"Voltage", data: xy("voltage"), borderColor:c.volt, tension:.15 },
-  ], "voltage (V)");
-  mkLine("currChart", [
-    { label:"Current", data: xy("current"), borderColor:c.curr, tension:.15 },
-  ], "current (A)");
-}
-
-// ---------- orchestration ----------
-async function refreshFlight() {
-  const errEl = document.getElementById("loadErr");
-  errEl.textContent = "";
-  try {
-    const flight = await loadFlight(curTeam, curRound);
-    if (!flight || flight.rows.length < 2) { errEl.textContent = "No flight data for this selection."; return; }
-    renderStats(flight);
-    renderMap(flight);
-    renderCharts(flight);
-  } catch (e) {
-    errEl.textContent = "Failed to load flight: " + e.message;
-  }
-}
-
-// ---------- theme ----------
-function initTheme() {
-  const btn = document.getElementById("themeBtn");
-  btn.addEventListener("click", () => {
-    const cur = document.documentElement.getAttribute("data-theme");
-    const mql = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = cur ? cur === "dark" : mql;
-    document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");
-    if (curTeam != null) refreshFlight();
-  });
-}
-
-// ---------- header sort ----------
-function initSort() {
-  document.querySelectorAll("#lbTable th").forEach(th => {
-    th.addEventListener("click", () => {
-      const k = th.dataset.k;
-      if (lbSort.k === k) lbSort.asc = !lbSort.asc;
-      else lbSort = { k, asc: (k==="name"||k==="rank") };
-      renderLeaderboard();
-    });
-  });
-}
-
-// ---------- boot ----------
 (async function(){
+  renderChrome("home");
   initTheme();
-  initSort();
-  initMap();
   try {
     await loadBase();
   } catch(e) {
@@ -513,11 +54,16 @@ function initSort() {
       "Could not load data files. If viewing locally, serve over http (e.g. `python -m http.server` in docs/).";
     return;
   }
-  renderLeaderboard();
-  buildTeamSelect();
-  // default: rank 1 team that has flights
-  const first = SCORES.find(t => roundsForTeam(t.id).length);
-  if (first) await selectTeam(first.id);
+  const teamsWithFlights = new Set(INDEX.map(f => f.teamId));
+  const totalPoints = INDEX.reduce((s,f) => s + (f.points||0), 0);
+  const top = [...SCORES].sort((a,b)=>b.total-a.total)[0];
+  const tile = (v,u,l) => `<div class="stat"><div class="v">${v}<span class="u"> ${u}</span></div><div class="l">${l}</div></div>`;
+  document.getElementById("summary").innerHTML =
+    tile(SCORES.length, "", "Teams") +
+    tile(INDEX.length, "", "Flights recorded") +
+    tile(teamsWithFlights.size, "", "Teams flown") +
+    tile((totalPoints/1000).toFixed(0), "k", "Telemetry points") +
+    (top ? tile(`${top.flag}`, "", `Leader: ${esc(top.name)}`) : "");
 })();
 </script>
 </body>

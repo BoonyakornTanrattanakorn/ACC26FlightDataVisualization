@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Explorer — ACC 2026 Flight Telemetry</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="siteHeader"></div>
+
+  <!-- Flight selector + stats -->
+  <section class="card">
+    <h2>Flight explorer</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="teamSel">Team</label>
+        <select id="teamSel"></select>
+      </div>
+      <div class="field">
+        <label>Round</label>
+        <div class="round-pills" id="roundPills"></div>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div id="loadErr" class="err" style="margin-top:10px;"></div>
+  </section>
+
+  <div class="grid2">
+    <!-- Map -->
+    <section class="card">
+      <h2>Ground track <span class="hint">colour = altitude</span></h2>
+      <div id="map"></div>
+      <div class="mapnote" id="mapnote"></div>
+    </section>
+
+    <!-- Altitude -->
+    <section class="card">
+      <h2>Altitude vs time</h2>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:var(--alt)"></span>Barometric (rel. ground)</span>
+        <span class="k"><span class="sw" style="background:var(--muted)"></span>GPS (MSL)</span>
+      </div>
+      <div class="chart-box"><canvas id="altChart"></canvas></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Battery voltage vs time</h2>
+      <div class="chart-box"><canvas id="voltChart"></canvas></div>
+    </section>
+    <section class="card">
+      <h2>Current draw vs time</h2>
+      <div class="chart-box"><canvas id="currChart"></canvas></div>
+    </section>
+  </div>
+
+  <p class="foot">Static dashboard · data from <code>data/</code> · built for GitHub Pages.</p>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/explorer.js"></script>
+</body>
+</html>

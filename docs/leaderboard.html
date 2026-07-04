@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard — ACC 2026 Flight Telemetry</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="siteHeader"></div>
+
+  <section class="card">
+    <h2>Leaderboard <span class="hint">click a team with flight data to open it in the explorer · click a header to sort</span></h2>
+    <div class="lb-scroll">
+      <table class="lb" id="lbTable">
+        <thead><tr>
+          <th class="l" data-k="rank">#</th>
+          <th class="l" data-k="name">Team</th>
+          <th data-k="roundTotal">Flight</th>
+          <th data-k="presentation">Pres.</th>
+          <th data-k="drawings">Draw.</th>
+          <th data-k="report">Report</th>
+          <th data-k="penalties">Pen.</th>
+          <th data-k="total" class="sorted">Total</th>
+        </tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+    <div id="loadErr" class="err" style="margin-top:10px;"></div>
+  </section>
+
+  <p class="foot">Static dashboard · data from <code>data/</code> · built for GitHub Pages.</p>
+</div>
+
+<script src="assets/common.js"></script>
+<script src="assets/leaderboard.js"></script>
+</body>
+</html>
