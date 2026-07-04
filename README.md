@@ -1,109 +1,108 @@
 # ACC 2026 Flight Telemetry Dashboard
 
-A static, dependency-free dashboard for visualizing the Air Cargo Challenge 2026
-data in [`raw_data/`](raw_data). Runs entirely in the browser and is served from
-GitHub Pages.
+A static, dependency-free web dashboard for exploring the **Air Cargo Challenge
+2026** flight telemetry and results. It runs entirely in the browser (no build
+step, no backend) and is served from GitHub Pages.
 
-## Pages
+> **Independent project.** This is an unofficial visualisation. All flight data
+> and scores belong to the competition organisers — see [Credits](#credits).
 
-The dashboard is split into four pages that share one stylesheet and a common
-JS module under [`docs/assets/`](docs/assets):
+## Features
 
-- **Home** ([`index.html`](docs/index.html)) — what the competition is, the flight
-  mission, and data credits, with links into the explorer.
-- **Leaderboard** ([`leaderboard.html`](docs/leaderboard.html)) — all teams joined
-  with their scores (sortable). Clicking a team that has flight data opens it in
-  the visualizer, deep-linked as `visualizer.html?team=<id>&round=<n>`.
-- **Flight Explorer** ([`explorer.html`](docs/explorer.html)) — a sortable table of
-  **every** recorded flight (duration, total distance, distance-segment distance,
-  average/max speed, max altitude, predicted payload, official score). Click any
-  header to sort; click a row to visualize it.
-- **Flight Visualizer** ([`visualizer.html`](docs/visualizer.html)) — a single
-  flight: a custom **3D flight path (Three.js)** with a replay transport (play /
-  pause / speed / scrub) whose clock reads **flight time** (`T+0` = take-off) and
-  a plane that flies the track, plus altitude / speed / voltage / current charts
-  (drag-to-zoom) with phase-boundary markers. Deep-linkable via `?team=&round=`.
+- **Leaderboard** — the full competition standings (flight, presentation,
+  drawings, report, penalties, total), sortable by any column. Click a team to
+  jump straight to one of its flights.
+- **Flight Explorer** — a sortable table of *every* recorded flight with derived
+  metrics: duration, total distance, distance-segment distance, average/max
+  ground speed, max altitude, predicted payload, and official score.
+- **Flight Visualizer** — replay a single flight in a custom **3D scene**:
+  - grass ground + sky, with the GPS track drawn as a **phase-coloured path**
+    (climb / distance / landing) and its ground shadow;
+  - a **to-scale aircraft** (2 m wingspan) that flies the path, pointed along its
+    heading, with a locator ring so it stays findable when zoomed out;
+  - a **replay transport** (play / pause / speed / scrub) whose clock reads
+    **flight time**, `T+0` at take-off;
+  - three camera views — **Orbit**, **Start POV** (from the take-off point) and
+    **Plane POV** (chase cam);
+  - **altitude / speed / voltage / current** charts with climb/distance/landing
+    markers and drag-to-zoom.
+- **Deep links & theming** — flights are shareable via `?team=<id>&round=<n>`;
+  light/dark theme throughout.
 
-## Flight phases &amp; scoring
+## Flight phases & scoring
 
-Metrics and phase boundaries come from the rulebook
-([`raw_data/Rules-ACC-2026-3.pdf`](raw_data/Rules-ACC-2026-3.pdf), §4.6–4.7):
+Metrics and phase boundaries follow the official ACC 2026 rulebook (§4.6–4.7):
 
 - **Flight-time start** `t0` = first moment the motor current exceeds 5 A for
   more than 3 s, **or** GPS ground speed reaches 5 km/h — whichever is first.
-- **Climb** `[t0, t0+60s)`, **Distance** `[t0+60s, t0+180s)` (the 120 s scored
-  window), **Landing** `[t0+180s, end]`.
-- The **round score** is normalized against the best team in each round and folds
-  in take-off, loading and payload-prediction bonuses minus penalties — it **cannot**
-  be recomputed from telemetry (it needs the announced take-off length, loading/
-  unloading times and payload prediction, none of which are logged). The dashboard
-  therefore shows the **official** round scores from `scores.csv` and derives only
-  the physical metrics (distance, speeds, phases) from the flight logs. The full
+- **Climb** `[t0, t0+60s)` · **Distance** `[t0+60s, t0+180s)` (the 120 s scored
+  window) · **Landing** `[t0+180s, end]`.
+- The official **round score** is normalised against the best team in the round
+  and folds in take-off / loading / payload-prediction bonuses minus penalties.
+  It **cannot** be recomputed from telemetry alone (it needs the announced
+  take-off length, loading/unloading times and payload prediction, none of which
+  are logged), so the dashboard shows the **official** scores and derives only the
+  physical metrics (distance, speeds, phases) from the flight logs. The full
   scoring method is documented on the Flight Explorer page.
 
-## What it shows
+## How it's built
 
-- **3D flight path** — the GPS track rendered in a custom Three.js scene with a
-  **grass ground** and **sky**, a phase-coloured path and its ground shadow, and a
-  **to-scale plane icon** (2 m wingspan) that flies the path pointing along its
-  heading. A flight-time replay transport (play / pause / speed / scrub) reads
-  `T+0` at take-off. Three camera views: **Orbit** (free orbit / pan / zoom),
-  **Start POV** (from the take-off point) and **Plane POV** (chase cam). Because a
-  2 m aircraft is a speck on a ~1 km track, a screen-constant locator ring keeps it
-  findable when zoomed out. Heading only updates past a small displacement
-  threshold, so GPS noise on the ground doesn't make the icon spin.
-- **Altitude / Speed / Voltage / Current vs time** — per-flight telemetry with
-  climb/distance/landing markers and drag-to-zoom (Chart.js + chartjs-plugin-zoom).
+Four pages under [`docs/`](docs) — Home, Leaderboard, Flight Explorer, Flight
+Visualizer — sharing one stylesheet and a common JS module in
+[`docs/assets/`](docs/assets). Front-end libraries load from a CDN, no bundler:
 
-## Front-end libraries (all via CDN, no build step)
-
-- **Three.js** (+ OrbitControls) — the 3D flight scene, loaded as an ES module
-  through an import map and re-exported onto `window` for the classic page script.
+- **Three.js** (+ OrbitControls) — the 3D flight scene.
 - **Chart.js** (+ **chartjs-plugin-zoom**) — the time-series charts.
 
-## Data pipeline
+### Data pipeline
 
-The raw `all_flights.csv` (~19 MB, 283k rows) is too large to load in one request,
-so [`scripts/build_dashboard_data.py`](scripts/build_dashboard_data.py) splits it
-into per-flight files under [`docs/data/`](docs/data) that the page fetches on demand:
+The raw telemetry (~19 MB, 283k rows) is too large to load at once, so
+[`scripts/build_dashboard_data.py`](scripts/build_dashboard_data.py) splits it
+into small per-flight files the page fetches on demand, under `docs/data/`:
 
-- **Per-flight CSV** `data/flights/<teamId>_<round>.csv` — one file per flight
-  (~160 KB each), fetched only when that flight is opened. Includes a GPS
-  ground-`speed` column alongside the raw channels.
-- **Lossless:** every raw sample is kept — no downsampling. The only lossy step is
-  **rounding** away floating-point noise below sensor resolution (altitude to mm,
-  voltage/current to mV/mA, speed to 0.01 km/h).
-- Latitude/longitude **converted to local x/y metres** relative to each flight's
-  own start point (equirectangular projection at the field latitude). Raw lat/lon
-  are kept too, for the 3D path.
-- `data/flights_index.json` — one entry per flight with the derived metrics and
-  **phase boundaries** (`t0`, `climbEndS`, `distEndS`), the official round `score`,
-  and team info (so the explorer table loads in a single fetch).
-- `data/scores.json` — teams joined with scores (leaderboard source).
+- **Per-flight files** — **lossless** (no downsampling; only floating-point noise
+  is rounded to sensor resolution). Add a GPS ground-`speed` column and local x/y
+  metres alongside raw lat/lon.
+- **A flight index** — one entry per flight with derived metrics, phase boundaries
+  (`t0`, `climbEndS`, `distEndS`), the official round `score`, and team info (so the
+  explorer table loads in a single fetch).
+- **A scores file** — teams joined with scores (leaderboard source).
 
-### Rebuild the data
+Rebuild whenever the source data changes, then commit the regenerated `docs/data/`:
 
 ```bash
 pip install pandas numpy
 python scripts/build_dashboard_data.py
 ```
 
-Re-run this whenever `raw_data/` changes, then commit the regenerated `docs/data/`.
+### Local preview
 
-## Local preview
-
-The page fetches data files over HTTP, so open it via a server (not `file://`):
+Serve over HTTP (the page fetches data files, so `file://` won't work):
 
 ```bash
 cd docs
-python -m http.server 8000
-# open http://localhost:8000/
+python -m http.server 8000   # then open http://localhost:8000/
 ```
 
-## Deploy (GitHub Pages)
+### Deploy (GitHub Pages)
 
-In the repository: **Settings → Pages → Build and deployment → Deploy from a branch**,
-then choose **branch `main`, folder `/docs`**. The site publishes at
-`https://<user>.github.io/ACC26FlightDataVisualization/`.
+**Settings → Pages → Deploy from a branch**, then **branch `main`, folder
+`/docs`**. `.nojekyll` is present so the `data/` files are served verbatim. The
+site publishes at `https://<user>.github.io/ACC26FlightDataVisualization/`.
 
-`.nojekyll` is present so Pages serves the `data/` files verbatim.
+## Credits
+
+- **Air Cargo Challenge 2026** — the competition, its rules, and all flight
+  telemetry and scores shown here are the work of the ACC organisers,
+  **Akamodell Stuttgart e.V.** (student aeromodelling club of the University of
+  Stuttgart), with coordination by EUROAVIA. Data was recorded via the
+  competition's automated on-board measurement system.
+  Official site: <https://aircargochallenge.de/>.
+- **Libraries** — [Three.js](https://threejs.org/),
+  [Chart.js](https://www.chartjs.org/) and
+  [chartjs-plugin-zoom](https://github.com/chartjs/chartjs-plugin-zoom).
+
+*This dashboard is an independent, non-official project and is not affiliated with
+or endorsed by the Air Cargo Challenge organisers. Full credit for the competition
+and the underlying data belongs to them; please refer to the official site for
+authoritative results, rules and news.*
