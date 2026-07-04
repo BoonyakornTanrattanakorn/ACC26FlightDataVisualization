@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACC 2026 — Flight Telemetry Dashboard</title>
+<title>Air Cargo Challenge 2026 — Flight Telemetry</title>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -11,18 +11,53 @@
   <div id="siteHeader"></div>
 
   <section class="card hero">
-    <h2>About this dashboard</h2>
-    <p style="margin:0;color:var(--text-2)">
-      A static, dependency-free dashboard for the Air Cargo Challenge 2026 flight
-      telemetry. Browse the full competition standings, then dive into any team's
-      flight to see its GPS ground track, altitude, battery voltage and current
-      draw over time. Data is served straight from the recorded flights — every
-      raw sample is kept (lossless).
+    <h2>The Air Cargo Challenge</h2>
+    <p style="margin:0 0 12px;color:var(--text-2)">
+      The Air Cargo Challenge (ACC) is a biennial aeronautical engineering
+      competition that brings together university students from across Europe to
+      design, build and fly a radio-controlled cargo aircraft. First held in
+      Lisbon in 2003 — in the spirit of the North American Design/Build/Fly
+      competition — it has grown into one of the continent's largest student
+      aerospace events.
     </p>
-    <div class="stats" id="summary"></div>
+    <p style="margin:0;color:var(--text-2)">
+      The <strong>2026 edition</strong> is hosted by
+      <a href="https://aircargochallenge.de/" target="_blank" rel="noopener">Akamodell Stuttgart</a>,
+      the student aeromodelling club of the University of Stuttgart and winners of
+      ACC 2024, with coordination by EUROAVIA. It runs
+      <strong>30 June – 3 July 2026</strong>, with technical presentations at the
+      University of Stuttgart (Vaihingen campus) and the flight competition at the
+      MFV Böblingen airfield.
+    </p>
+    <div class="stats" id="editionStats"></div>
     <div id="loadErr" class="err" style="margin-top:10px;"></div>
   </section>
 
+  <section class="card">
+    <h2>The flight mission</h2>
+    <p style="margin:0 0 12px;color:var(--text-2)">
+      The task of ACC 2026 is to transport as many 0.33&nbsp;l soda cans as
+      possible, as fast as possible. Each scored flight is measured automatically
+      and follows the same profile:
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="v">60<span class="u"> s</span></div><div class="l">Climb</div></div>
+      <div class="stat"><div class="v">120<span class="u"> s</span></div><div class="l">Distance flight</div></div>
+      <div class="stat"><div class="v">≤ 25<span class="u"> kg</span></div><div class="l">Max take-off mass</div></div>
+      <div class="stat"><div class="v">30<span class="u"> A</span></div><div class="l">Current limit</div></div>
+    </div>
+    <p style="margin:12px 0 0;color:var(--text-2)">
+      A take-off with 60&nbsp;s of climb is followed by a 120&nbsp;s distance
+      segment and a safe landing. All teams fly the same prescribed T-MOTOR
+      powertrain, so results reflect the airframe rather than pilot skill. Bonus
+      points reward a short runway and fast loading/unloading; exceeding the 30&nbsp;A
+      current limit incurs penalties. A team's competition score combines its best
+      flight rounds with marks for the technical <strong>presentation</strong>,
+      <strong>drawings</strong> and <strong>report</strong>, minus penalties.
+    </p>
+  </section>
+
+  <h2 style="font-size:15px;margin:24px 0 12px;">Explore the data</h2>
   <div class="nav-cards">
     <a class="nav-card" href="leaderboard.html">
       <h3>🏆 Leaderboard</h3>
@@ -38,7 +73,26 @@
     </a>
   </div>
 
-  <p class="foot">Static dashboard · data from <code>data/</code> · built for GitHub Pages.</p>
+  <section class="card" style="margin-top:16px;">
+    <h2>Data &amp; credits</h2>
+    <p style="margin:0 0 10px;color:var(--text-2)">
+      All flight telemetry and scores shown here are from the
+      <strong>Air Cargo Challenge 2026</strong>, organised by
+      <a href="https://aircargochallenge.de/" target="_blank" rel="noopener">Akamodell Stuttgart e.V.</a>,
+      who recorded the flights via the competition's automated on-board measurement
+      system. Full credit for the competition, its rules and the underlying data
+      belongs to the ACC organisers. See
+      <a href="https://aircargochallenge.de/" target="_blank" rel="noopener">aircargochallenge.de</a>
+      for the official results, rules and news.
+    </p>
+    <p style="margin:0;color:var(--muted);font-size:12px">
+      This dashboard is an independent, non-official visualisation built for
+      exploring the data. It is not affiliated with or endorsed by the ACC
+      organisers.
+    </p>
+  </section>
+
+  <p class="foot">Data © Air Cargo Challenge 2026 / Akamodell Stuttgart e.V. · independent visualisation.</p>
 </div>
 
 <script src="assets/common.js"></script>
@@ -55,15 +109,12 @@
     return;
   }
   const teamsWithFlights = new Set(INDEX.map(f => f.teamId));
-  const totalPoints = INDEX.reduce((s,f) => s + (f.points||0), 0);
-  const top = [...SCORES].sort((a,b)=>b.total-a.total)[0];
   const tile = (v,u,l) => `<div class="stat"><div class="v">${v}<span class="u"> ${u}</span></div><div class="l">${l}</div></div>`;
-  document.getElementById("summary").innerHTML =
-    tile(SCORES.length, "", "Teams") +
-    tile(INDEX.length, "", "Flights recorded") +
+  document.getElementById("editionStats").innerHTML =
+    tile(SCORES.length, "", "Teams registered") +
     tile(teamsWithFlights.size, "", "Teams flown") +
-    tile((totalPoints/1000).toFixed(0), "k", "Telemetry points") +
-    (top ? tile(`${top.flag}`, "", `Leader: ${esc(top.name)}`) : "");
+    tile(INDEX.length, "", "Scored flights") +
+    tile("4", "", "Flight rounds");
 })();
 </script>
 </body>
