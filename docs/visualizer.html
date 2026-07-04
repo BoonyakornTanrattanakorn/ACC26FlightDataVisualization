@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Visualizer — ACC 2026 Flight Telemetry</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="siteHeader"></div>
+
+  <!-- Flight selector + stats -->
+  <section class="card">
+    <h2>Flight visualizer <span class="hint">3D flight path with replay · <a href="explorer.html">back to all flights</a></span></h2>
+    <div class="controls">
+      <div class="field">
+        <label for="teamSel">Team</label>
+        <select id="teamSel"></select>
+      </div>
+      <div class="field">
+        <label>Round</label>
+        <div class="round-pills" id="roundPills"></div>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div id="loadErr" class="err" style="margin-top:10px;"></div>
+  </section>
+
+  <!-- 3D flight path -->
+  <section class="card">
+    <h2>3D flight path <span class="hint">colour = phase · Orbit view: drag to orbit, wheel to zoom, right-drag to pan · or watch from Start / Plane POV</span></h2>
+    <div id="scene3d">
+      <div id="sceneClock" class="scene-clock">T+0:00</div>
+    </div>
+    <!-- custom replay transport -->
+    <div class="transport">
+      <button id="playBtn" class="tp-btn" type="button" aria-label="Play/pause">▶</button>
+      <button id="restartBtn" class="tp-btn" type="button" aria-label="Restart">⟲</button>
+      <input id="scrub" class="tp-scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Timeline">
+      <span id="scrubLabel" class="tp-label">T+0:00</span>
+      <select id="speedSel" class="tp-speed" aria-label="Playback speed">
+        <option value="1">1×</option>
+        <option value="2">2×</option>
+        <option value="4" selected>4×</option>
+        <option value="8">8×</option>
+      </select>
+      <div class="tp-views" id="viewBtns" role="group" aria-label="Camera view">
+        <button class="tp-btn" type="button" data-view="orbit" aria-pressed="true"
+                title="Free orbit camera">Orbit</button>
+        <button class="tp-btn" type="button" data-view="start" aria-pressed="false"
+                title="View from the take-off point">Start POV</button>
+        <button class="tp-btn" type="button" data-view="plane" aria-pressed="false"
+                title="Chase camera following the aircraft">Plane POV</button>
+      </div>
+    </div>
+    <div class="legend" id="phaseLegend" style="margin-top:10px;">
+      <span class="k"><span class="sw" style="background:var(--volt)"></span>Climb</span>
+      <span class="k"><span class="sw" style="background:var(--alt)"></span>Distance (scored)</span>
+      <span class="k"><span class="sw" style="background:var(--curr)"></span>Landing</span>
+    </div>
+    <div class="mapnote" id="mapnote"></div>
+  </section>
+
+  <div class="grid2">
+    <!-- Altitude -->
+    <section class="card">
+      <h2>Altitude vs time <span class="hint">drag to zoom · double-click to reset</span></h2>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:var(--alt)"></span>Barometric (rel. ground)</span>
+        <span class="k"><span class="sw" style="background:var(--muted)"></span>GPS (MSL)</span>
+      </div>
+      <div class="chart-box"><canvas id="altChart"></canvas></div>
+    </section>
+    <!-- Speed -->
+    <section class="card">
+      <h2>Ground speed vs time <span class="hint">drag to zoom · double-click to reset</span></h2>
+      <div class="chart-box"><canvas id="speedChart"></canvas></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Battery voltage vs time <span class="hint">drag to zoom · double-click to reset</span></h2>
+      <div class="chart-box"><canvas id="voltChart"></canvas></div>
+    </section>
+    <section class="card">
+      <h2>Current draw vs time <span class="hint">drag to zoom · double-click to reset</span></h2>
+      <div class="chart-box"><canvas id="currChart"></canvas></div>
+    </section>
+  </div>
+
+  <p class="foot">Data © <a href="https://aircargochallenge.de/" target="_blank" rel="noopener">Air Cargo Challenge 2026</a> / Akamodell Stuttgart e.V. · independent visualisation.</p>
+</div>
+
+<!-- Three.js via ESM import map, re-exported onto window for the classic script below. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from "three";
+  import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+  window.THREE = THREE;
+  window.OrbitControls = OrbitControls;
+  window.dispatchEvent(new Event("three-ready"));
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/visualizer.js"></script>
+</body>
+</html>

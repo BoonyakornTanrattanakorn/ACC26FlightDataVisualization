@@ -50,6 +50,7 @@ async function loadFlight(teamId, round) {
       t: +c[idx.t], x: +c[idx.x], y: +c[idx.y],
       altGps: +c[idx.altGps], altBaro: +c[idx.altBaro],
       voltage: +c[idx.voltage], current: +c[idx.current],
+      speed: +c[idx.speed],
       lat: +c[idx.lat], lon: +c[idx.lon],
     };
   });
@@ -58,12 +59,13 @@ async function loadFlight(teamId, round) {
 
 // ---------- shared header + nav ----------
 // Renders the top bar (title, theme button) and site nav into #siteHeader.
-// `active` is one of "home" | "leaderboard" | "explorer".
+// `active` is one of "home" | "leaderboard" | "explorer" | "visualizer".
 function renderChrome(active) {
   const links = [
     { key: "home",        href: "index.html",       label: "Home" },
     { key: "leaderboard", href: "leaderboard.html", label: "Leaderboard" },
     { key: "explorer",    href: "explorer.html",    label: "Flight Explorer" },
+    { key: "visualizer",  href: "visualizer.html",  label: "Flight Visualizer" },
   ];
   const nav = links.map(l =>
     `<a href="${l.href}"${l.key === active ? ' aria-current="page"' : ""}>${l.label}</a>`

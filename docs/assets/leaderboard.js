@@ -39,7 +39,7 @@ function renderLeaderboard() {
     tr.addEventListener("click", () => {
       const id = +tr.dataset.id;
       const r = firstRound(id);
-      window.location.href = `explorer.html?team=${id}` + (r != null ? `&round=${r}` : "");
+      window.location.href = `visualizer.html?team=${id}` + (r != null ? `&round=${r}` : "");
     });
   });
   document.querySelectorAll("#lbTable th").forEach(th => {
