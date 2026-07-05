@@ -107,6 +107,45 @@ select {
   border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
+/* Flight-explorer filter bar */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 12px; }
+.filters input[type="search"] {
+  background: var(--page); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 9px; font-size: 13px; font-family: inherit; min-width: 220px;
+}
+.filters select { min-width: 120px; }
+.filters .filter-clear {
+  border: 1px solid var(--border); background: var(--page); color: var(--text-2);
+  border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; height: 34px;
+}
+.filters .filter-clear:hover { color: var(--text); border-color: var(--alt); }
+.filters .filter-count { color: var(--muted); font-size: 12px; margin-left: auto; align-self: center; }
+
+/* Collapsible range-filter panel */
+.range-panel { margin: 0 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--page); }
+.range-panel > summary {
+  cursor: pointer; padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--text-2);
+  list-style: none; user-select: none;
+}
+.range-panel > summary::-webkit-details-marker { display: none; }
+.range-panel > summary::before { content: "▸ "; color: var(--muted); }
+.range-panel[open] > summary::before { content: "▾ "; }
+.range-panel > summary .hint { font-weight: 400; }
+.ranges-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 16px; padding: 4px 12px 12px;
+}
+.range { display: flex; flex-direction: column; gap: 4px; }
+.range > label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.range .ru { text-transform: none; letter-spacing: 0; opacity: .8; }
+.range-inputs { display: flex; align-items: center; gap: 6px; }
+.range-inputs input[type="number"] {
+  width: 100%; min-width: 0; background: var(--page); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 7px; font-size: 13px;
+  font-family: inherit; font-variant-numeric: tabular-nums;
+}
+.range-inputs .dash { color: var(--muted); flex: none; }
+
 .round-pills button[aria-pressed="true"] { background: var(--alt); color: #fff; border-color: var(--alt); }
 .round-pills button:disabled { opacity: .32; cursor: not-allowed; }
 
@@ -183,6 +222,7 @@ table.lb tr.clickable { cursor: pointer; }
 th.sorted::after { content: " ▾"; color: var(--alt); }
 th.sorted.asc::after { content: " ▴"; }
 .deriv { color: var(--alt); font-weight: 700; cursor: help; margin-left: 1px; }
+.pen { color: var(--curr); font-weight: 600; }  /* over-current penalty > 0 */
 
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
 .legend .k { display: inline-flex; align-items: center; gap: 6px; }

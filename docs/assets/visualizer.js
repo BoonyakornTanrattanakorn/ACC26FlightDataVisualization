@@ -64,12 +64,51 @@ async function selectRound(round) {
   syncUrl();
 }
 
+// ---------- scoring (telemetry-derivable components) ----------
+// Rule Payload 7: one can = 0.350 kg. Rule 4.7.4 / Eq. 6: over-current limit 30 A.
+const CAN_MASS_KG = 0.35;
+const CURRENT_LIMIT_A = 30;
+
+// Compute the score components that CAN be derived from telemetry. Note the
+// official normalized round score (meta.score) can't be recomputed here — it
+// needs the announced take-off length, load/unload times and actual carried
+// mass, none of which are in the log. So:
+//  * rawScore = m·l² is an ESTIMATE using predicted payload as the mass proxy.
+//  * overCurrentPenalty is exact: P = min(1, 0.002·∫max(0, I−30) dt).
+function scoreBreakdown(flight) {
+  const { rows, meta } = flight;
+  const mKg = (meta.predictedPayload ?? 0) * CAN_MASS_KG;
+  const lM = meta.distSegM || 0;
+  const rawScore = mKg * lM * lM;
+
+  // Trapezoidal integral of max(0, I − 30) over the whole logged flight.
+  let overCurrentAs = 0, peakCurrent = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const dt = rows[i].t - rows[i-1].t;
+    if (dt <= 0) continue;
+    const eA = Math.max(0, rows[i-1].current - CURRENT_LIMIT_A);
+    const eB = Math.max(0, rows[i].current - CURRENT_LIMIT_A);
+    overCurrentAs += 0.5 * (eA + eB) * dt;
+    if (rows[i].current > peakCurrent) peakCurrent = rows[i].current;
+  }
+  const overCurrentPenalty = Math.min(1, 0.002 * overCurrentAs);
+  return { mKg, lM, rawScore, overCurrentAs, overCurrentPenalty, peakCurrent };
+}
+
+// Compact SI-ish formatting for the (large) raw m·l² number.
+function fmtRaw(v) {
+  if (v >= 1e6) return (v/1e6).toFixed(2) + "M";
+  if (v >= 1e3) return (v/1e3).toFixed(1) + "k";
+  return v.toFixed(0);
+}
+
 // ---------- stats ----------
 function tile(v, u, l) {
   return `<div class="stat"><div class="v">${v}<span class="u"> ${u}</span></div><div class="l">${l}</div></div>`;
 }
 function renderStats(flight) {
   const { meta } = flight;
+  const sb = scoreBreakdown(flight);
   document.getElementById("stats").innerHTML =
     tile(meta.durationS.toFixed(0), "s", "Duration") +
     tile((meta.distSegM/1000).toFixed(2), "km", "Distance segment °") +
@@ -77,7 +116,10 @@ function renderStats(flight) {
     tile(meta.maxSpeedKmh.toFixed(0), "km/h", "Max speed °") +
     tile(meta.maxAltBaro.toFixed(0), "m", "Max altitude °") +
     tile(meta.predictedPayload ?? "—", "cans", "Pred. payload") +
-    tile(meta.score.toFixed(0), "", "Round score");
+    tile(meta.score.toFixed(0), "", "Round score") +
+    tile(fmtRaw(sb.rawScore), "", "Est. raw score (m·l²) *") +
+    tile(sb.overCurrentPenalty.toFixed(3), "", "Over-current penalty **") +
+    tile(sb.overCurrentAs.toFixed(0), "A·s", "∫ over-30 A **");
 }
 
 // ---------- phase helpers ----------
@@ -668,6 +710,32 @@ const phaseLinePlugin = {
   },
 };
 
+// Horizontal reference line at the current limit (30 A) for the current chart.
+// The over-limit region is where the penalty integral accrues (rule 4.7.4).
+const currentLimitPlugin = {
+  id: "currentLimit",
+  afterDatasetsDraw(chart) {
+    const yv = chart.$currentLimit;
+    if (yv == null) return;
+    const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+    const py = y.getPixelForValue(yv);
+    if (py < y.top || py > y.bottom) return;
+    ctx.save();
+    ctx.strokeStyle = css("--curr");
+    ctx.globalAlpha = 0.9;
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(left, py); ctx.lineTo(right, py); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = css("--curr");
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`${yv} A limit`, right - 4, py - 4);
+    ctx.restore();
+  },
+};
+
 function baseOpts(yLabel) {
   const c = COL();
   return {
@@ -699,14 +767,15 @@ function baseOpts(yLabel) {
     elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2 } },
   };
 }
-function mkLine(id, datasets, yLabel, marks) {
+function mkLine(id, datasets, yLabel, marks, extra) {
   const ctx = document.getElementById(id);
   if (charts[id]) charts[id].destroy();
   charts[id] = new Chart(ctx, {
     type: "line", data: { datasets }, options: baseOpts(yLabel),
-    plugins: [phaseLinePlugin],
+    plugins: [phaseLinePlugin, currentLimitPlugin],
   });
   charts[id].$phaseMarks = marks;
+  if (extra && extra.currentLimit != null) charts[id].$currentLimit = extra.currentLimit;
   // double-click to reset zoom
   ctx.ondblclick = () => charts[id].resetZoom();
   charts[id].update();
@@ -728,9 +797,22 @@ function renderCharts(flight) {
   mkLine("voltChart", [
     { label:"Voltage", data: xy("voltage"), borderColor:c.volt, tension:.15 },
   ], "voltage (V)", marks);
+  // Current chart: colour the trace red above the 30 A limit and shade the
+  // over-limit area (where the penalty integral accrues), plus a 30 A line.
+  const overColor = css("--curr");
   mkLine("currChart", [
-    { label:"Current", data: xy("current"), borderColor:c.curr, tension:.15 },
-  ], "current (A)", marks);
+    {
+      label:"Current", data: xy("current"), borderColor:c.accent, tension:.15,
+      // fill down to the 30 A limit line, but only the part above it shows
+      // because segments below get a transparent fill via segment styling.
+      fill: { target: { value: CURRENT_LIMIT_A }, above: "rgba(224,90,90,0.18)", below: "rgba(0,0,0,0)" },
+      segment: {
+        borderColor: (ctx) =>
+          (ctx.p0.parsed.y > CURRENT_LIMIT_A || ctx.p1.parsed.y > CURRENT_LIMIT_A)
+            ? overColor : c.accent,
+      },
+    },
+  ], "current (A)", marks, { currentLimit: CURRENT_LIMIT_A });
 }
 
 // ---------- orchestration ----------

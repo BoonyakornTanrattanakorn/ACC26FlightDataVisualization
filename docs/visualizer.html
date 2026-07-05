@@ -24,6 +24,14 @@
       </div>
     </div>
     <div class="stats" id="stats"></div>
+    <p class="hint" style="margin-top:10px;">
+      ° derived from GPS telemetry ·
+      * <strong>Est. raw score (m·l²)</strong> uses predicted payload as mass (0.35 kg/can, rule Payload 7)
+      and distance-segment length; it is <em>not</em> the official normalized round score
+      (which also needs announced take-off length and load/unload times). ·
+      ** <strong>Over-current penalty</strong> = min(1, 0.002·∫max(0, I−30 A) dt) per rule 4.7.4,
+      computed from the logged current.
+    </p>
     <div id="loadErr" class="err" style="margin-top:10px;"></div>
   </section>
 

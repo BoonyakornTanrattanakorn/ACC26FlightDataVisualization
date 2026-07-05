@@ -65,6 +65,31 @@ START_CURRENT_A = 5.0
 START_CURRENT_HOLD_S = 3.0
 START_SPEED_KMH = 5.0
 
+# Scoring constants (telemetry-derivable components only — see NOTE at top).
+CAN_MASS_KG = 0.35        # rule Payload 7: one 0.33 l can = 350 g
+CURRENT_LIMIT_A = 30.0    # rule 4.7.4 / Eq. 6: over-current penalty threshold
+
+
+def over_current_penalty(t: np.ndarray, current: np.ndarray) -> tuple[float, float]:
+    """Over-current penalty per rule 4.7.4 / Eq. 6 (change-log corrected form):
+
+        P = min(1, 0.002 * integral of max(0, I - 30 A) dt)
+
+    Returns (penalty in [0, 1], integral in A*s). Integrated over the whole log,
+    matching the rule ("active for the total flight round").
+    """
+    over = np.maximum(0.0, current - CURRENT_LIMIT_A)
+    integ = float(np.trapezoid(over, t)) if len(t) > 1 else 0.0
+    return min(1.0, 0.002 * integ), integ
+
+
+def est_flight_score(predicted_payload, dist_seg_m: float) -> float:
+    """ESTIMATED raw round score m * l^2 (rule 4.7.1). Mass is the predicted
+    payload (cans * 0.35 kg) since the actual carried mass is not logged. This is
+    NOT the official normalized round score."""
+    m = (predicted_payload or 0) * CAN_MASS_KG
+    return m * dist_seg_m * dist_seg_m
+
 
 def to_local_xy(lat: pd.Series, lon: pd.Series) -> tuple[pd.Series, pd.Series]:
     """Equirectangular projection to metres, relative to the first fix of the flight."""
@@ -171,6 +196,11 @@ def build_flights(round_scores: dict[tuple[int, int], float],
         dist_seg_m, avg_speed_dist = segment_metrics(
             t, step_d, speed_kmh, climb_end, dist_end)
 
+        # Telemetry-derivable scoring components (see NOTE at top of file).
+        pred_payload = teams.get(team_id, {}).get("predictedPayload")
+        oc_penalty, oc_integral = over_current_penalty(t, current)
+        raw_score = est_flight_score(pred_payload, dist_seg_m)
+
         out = pd.DataFrame({
             "t":       np.round(t, 2),
             "x":       x.round(2),
@@ -208,6 +238,9 @@ def build_flights(round_scores: dict[tuple[int, int], float],
             "avgSpeedKmh": round(avg_speed, 1),
             "avgSpeedDistKmh": round(avg_speed_dist, 1),
             "score": round(round_scores.get((team_id, rnd), 0.0), 1),
+            "estFlightScore": round(raw_score, 1),
+            "overCurrentPenalty": round(oc_penalty, 3),
+            "overCurrentAs": round(oc_integral, 1),
             "file": f"data/flights/{fname}",
         })
 

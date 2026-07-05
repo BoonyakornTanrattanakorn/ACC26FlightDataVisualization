@@ -19,6 +19,26 @@
       the 120&nbsp;s scored window — see
       <a href="#scoring">how flights are scored</a> below.
     </p>
+    <div class="filters" id="flFilters">
+      <div class="field">
+        <label for="fTeam">Team / university</label>
+        <input type="search" id="fTeam" placeholder="Search name…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fRound">Round</label>
+        <select id="fRound"><option value="">All</option></select>
+      </div>
+      <div class="field">
+        <label for="fPayload">Pred. payload</label>
+        <select id="fPayload"><option value="">All</option></select>
+      </div>
+      <button type="button" id="fClear" class="filter-clear">Clear</button>
+      <span class="filter-count" id="fCount"></span>
+    </div>
+    <details class="range-panel">
+      <summary>Filter by value ranges <span class="hint">min / max on any numeric column</span></summary>
+      <div class="ranges-grid" id="flRanges"></div>
+    </details>
     <div class="lb-scroll">
       <table class="lb" id="flTable">
         <thead><tr id="flHead"></tr></thead>
